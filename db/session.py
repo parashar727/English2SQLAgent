@@ -21,10 +21,14 @@ def query_database(sql_string, max_rows=50):
                     "data": "Query executed successfully. No rows returned"
                 }, indent=2)
 
-            columns = list(result.keys())
-            rows = result.fetchmany(max_rows)
+            # columns = list(result.keys())
+            # rows = result.fetchmany(max_rows)
 
-            data = [dict(zip(columns, row)) for row in rows]
+            # data = [dict(zip(columns, row)) for row in rows]
+
+            rows = result.mappings().fetchmany(max_rows)
+
+            data = [dict(row) for row in rows]
 
             payload = {
                 "status": "success",
