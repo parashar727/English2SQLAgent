@@ -19,7 +19,7 @@ class AgentState(TypedDict):
     retry_count: int
     messages: Annotated[List[BaseMessage], operator.add]
 
-model = ChatOllama(model="qwen2.5-coder:1.5b", num_gpu=1, temperature=0.1) # Look into if SQL generation and SQL summaries can use different models
+model = ChatOllama(model="qwen2.5-coder:3b", num_gpu=1, temperature=0.1) # Look into if SQL generation and SQL summaries can use different models
 
 def generate_sql_node(state: AgentState):
     system_prompt = f"""
@@ -32,7 +32,6 @@ def generate_sql_node(state: AgentState):
 
     {state.get("dbschema")}
     """
-    print(state.get("dbschema"))
     sql_result = state.get("sql_result")
     if sql_result and sql_result.get("status") == "error":
         response = model.invoke(
@@ -53,7 +52,7 @@ def generate_sql_node(state: AgentState):
     match = re.search(r"```(?:sql)?\s*(.*?)\s*```", response.content, re.DOTALL | re.IGNORECASE)
     if match:
         print(match.group(1).replace("\n", " "))
-        clean_sql_string = match.group(1).replace("\n", " ") # Look into if SQLAlchemy can just run with newlines anyway (so SQL comments dont break)
+        clean_sql_string = match.group(1).strip()
     else:
         clean_sql_string = response.content.strip()
 
@@ -92,7 +91,7 @@ def format_response_node(state: AgentState):
     """
 
     response = model.invoke(
-        SystemMessage(content=system_prompt)
+        [SystemMessage(content=system_prompt)]
     )
 
     return {
@@ -132,7 +131,7 @@ engine = create_engine(DATABASE_URL)
 database_schema = generate_markdown_schema(engine)
 
 inital_state = {
-    "user_query": "What are the top 5 most famous artists?",
+    "user_query": "What are the top 5 most spending customers?",
     "dbschema": database_schema,
     "retry_count": 0,
 }
