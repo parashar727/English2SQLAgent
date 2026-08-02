@@ -34,6 +34,7 @@ def generate_sql_node(state: AgentState):
     """
     sql_result = state.get("sql_result")
     if sql_result and sql_result.get("status") == "error":
+        state["retry_count"] = state.get("retry_count", 0) + 1
         response = model.invoke(
                     [
                         SystemMessage(content=system_prompt),
@@ -99,10 +100,16 @@ def format_response_node(state: AgentState):
         "sql_result_summary": response.content
     }
 
-def decide_next(state: AgentState) -> Literal["generate_sql", "format_response"]:
+MAX_RETRIES = 3
+
+def decide_next(state: AgentState) -> Literal["generate_sql", "format_response", END]: # type: ignore
     """Inspect generated SQL to decide where to go next."""
     if state.get("sql_result").get("status") == "error":
-        return "generate_sql"
+        if state.get("retry_count") >= MAX_RETRIES:
+            print("Model cannot construct a working query, please use a better model.")
+            return END
+        else: 
+            return "generate_sql"
     else:
         return "format_response"
 
